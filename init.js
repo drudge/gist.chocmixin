@@ -59,17 +59,17 @@ function createGist(options) {
     showLoginWindow(options.cb);
     return;
   }
-
+  
   keychain.getPassword({ account: credentials.username, service: service }, function(err, pass) {
     if (pass) {
       credentials.password = pass;
     }
-
+    
     if (!credentials.password) {
       showLoginWindow(options.cb);
       return;
     }
-
+    
     var gist = new Gister({username: credentials.username, password: credentials.password })
       , payload = { "public": isPublic, files: {}, description: '' }
       , file;
@@ -77,19 +77,24 @@ function createGist(options) {
     docs.forEach(function(doc) {
       file = doc.isUntitled() ? 'untitled' : doc.filename()
       
-      if(!doc.text) {
-        return;
+      if(doc.text) {
+        payload.files[file] = { content: doc.text };
       }
-      
-      payload.files[file] = { content: doc.text };
     });
+    
+    var count = Object.keys(payload.files).length;
+    
+    if (!count) {
+      Alert.beep();
+      return;
+    }
     
     gist.create(payload);
     
     gist.on('created', function (d) {
       d = d || {};
       url = d.html_url;
-    
+      
       if (url) {
         handleGistURL(url, isPublic);
       }
