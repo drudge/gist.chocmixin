@@ -1,6 +1,6 @@
 # Gist mixin for Chocolat
 
-This mixin adds gist support to Chocolat. **It is currently under development. Use at your own risk.**
+This mixin adds gist support to [Chocolat](http://chocolatapp.com). **It is currently under development. Use at your own risk.**
 
 ## Requirements
 
