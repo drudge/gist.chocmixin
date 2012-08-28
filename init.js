@@ -171,9 +171,20 @@ function showLoginWindow(fn) {
       } else {
         document.getElementById('username').focus();
       }
+      
+      window.passwordKeyPress = function(e) {
+        if (typeof e == 'undefined' && window.event) { e = window.event; }
+        if (e.keyCode == 13) {
+          chocolat.sendMessage('clickLoginButton', []);
+        }
+      }
     }, [credentials.username]);
   };
-
+  win.onMessage = function (name, args) {
+    if (name === 'clickLoginButton') {
+      win.onButtonClick('Login');
+    }
+  };
   win.onButtonClick = function(title) {
     if (title == 'Cancel') {
       win.close();
