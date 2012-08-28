@@ -20,14 +20,20 @@ var service = 'Chocolat Gist Plugin'
   , credentials = {}
   , self = this;
 
+/*
+ * Copy URL to clipboard and notify the user.
+ */
 
-function handleGistURL(url) {
+function handleGistURL(url, isPublic) {
+  pubStr = (typeof isPublic === true) ? 'Public' : 'Private';
+  
   if (!url) return;
   
   Clipboard.copy(url);
+  
   if (typeof Alert.notify !== 'undefined') {
     Alert.notify({
-      title: "Public Gist Created",
+      title: pubStr + " Gist Created",
       subtitle: url,
       body: "The URL has been copied to your clipboard.",
       button: "Show",
@@ -36,18 +42,21 @@ function handleGistURL(url) {
       }
     });
   } else {
-    Alert.show('Public Gist Created', url, ['OK']);
+    Alert.show(pubStr + ' Gist Created', url, ['OK']);
   }
 }
+
 /**
- * Create a public Gist from the current document.
- *
- * @api public
+ * Create a new gist with the given `options`.
  */
 
-function publicGistCurrentDocument() {    
+function createGist(options) {
+  var isPublic = (typeof options.pub !== 'undefined') ? options.pub : true;
+  var docs = options.docs || [];
+  options.cb = options.cb || function() {};
+  
   if (!credentials.username) {
-    showLoginWindow(publicGistCurrentDocument);
+    showLoginWindow(options.cb);
     return;
   }
 
@@ -57,32 +66,77 @@ function publicGistCurrentDocument() {
     }
 
     if (!credentials.password) {
-      showLoginWindow(publicGistCurrentDocument);
+      showLoginWindow(options.cb);
       return;
     }
 
     var gist = new Gister({username: credentials.username, password: credentials.password })
-      , doc = Document.current()
-      , file = doc.isUntitled() ? 'untitled' : doc.filename()
-      , payload = {};
-    
-    if (!doc.text) {
-      Alert.beep();
-      return;
-    }
-    
-    payload[file] = doc.text;
+      , payload = { "public": isPublic, files: {}, description: '' }
+      , file;
+      
+    docs.forEach(function(doc) {
+      file = doc.isUntitled() ? 'untitled' : doc.filename()
+      
+      if(!doc.text) {
+        return;
+      }
+      
+      payload.files[file] = { content: doc.text };
+    });
     
     gist.create(payload);
     
     gist.on('created', function (d) {
       d = d || {};
       url = d.html_url;
-      
+    
       if (url) {
-        handleGistURL(url);
+        handleGistURL(url, isPublic);
       }
     });
+  });
+}
+
+/**
+ * Create a public Gist from the current document.
+ *
+ * @api public
+ */
+
+function publicGistCurrentDocument() {
+  var doc = Document.current();
+  
+  if (!doc) {
+    Alert.beep();
+    return;
+  }
+  
+  createGist({
+    pub: true,
+    docs: [ doc ],
+    cb: publicGistCurrentDocument
+  });
+}
+
+
+/**
+ * Create a private Gist from the current document.
+ *
+ * @api public
+ */
+
+function privateGistCurrentDocument() {
+  var doc = Document.current();
+  
+  if (!doc) {
+    Alert.beep();
+    return;
+  }
+  
+  createGist({
+    pub: false,
+    docs: [ doc ],
+    cb: privateGistCurrentDocument
   });
 }
 
@@ -93,46 +147,96 @@ function publicGistCurrentDocument() {
  */
 
 function publicGistSelectedDocuments() {
-  if (!credentials.username) {
-    showLoginWindow(publicGistSelectedDocuments);
+  var mainWindow = MainWindow.current()
+    , currentTab = (mainWindow ? mainWindow.currentTab() : null)
+    , docs;
+  
+  if (!currentTab) {
+    Alert.beep();
+    return;
+  }
+  
+  docs = currentTab.visibleDocuments() || [];
+  
+  createGist({
+    pub: true,
+    docs: docs,
+    cb: publicGistSelectedDocuments
+  });
+}
+
+/**
+ * Create a private Gist from the currently selected documents.
+ *
+ * @api public
+ */
+
+function privateGistSelectedDocuments() {
+  var mainWindow = MainWindow.current()
+    , currentTab = (mainWindow ? mainWindow.currentTab() : null)
+    , docs;
+
+  if (!currentTab) {
+    Alert.beep();
     return;
   }
 
-  keychain.getPassword({ account: credentials.username, service: service }, function(err, pass) {
-    if (pass) {
-      credentials.password = pass;
-    }
+  docs = currentTab.visibleDocuments() || [];
 
-    if (!credentials.password) {
-      showLoginWindow(publicGistSelectedDocuments);
-      return;
-    }
+  createGist({
+    pub: false,
+    docs: docs,
+    cb: privateGistSelectedDocuments
+  });
+}
 
-    var gist = new Gister({username: credentials.username, password: credentials.password })
-      , mainWindow = MainWindow.current()
-      , currentTab = (mainWindow ? mainWindow.currentTab() : null);
+/**
+ * Create a public Gist from the currently active documents.
+ *
+ * @api public
+ */
 
-    if (currentTab) {
-      var docs = currentTab.visibleDocuments() || []
-        , payload = {}
-        , file;
+function publicGistActiveDocuments() {
+  var mainWindow = MainWindow.current()
+    , currentTab = (mainWindow ? mainWindow.currentTab() : null)
+    , docs;
 
-      docs.forEach(function(doc) {
-        file = doc.filename() || 'untitled';
-        payload[file] = doc.text;
-      })
+  if (!currentTab) {
+    Alert.beep();
+    return;
+  }
 
-      gist.create(payload);
+  docs = currentTab.activeDocuments() || [];
 
-      gist.on('created', function (d) {
-        d = d || {};
-        url = d.html_url;
+  createGist({
+    pub: true,
+    docs: docs,
+    cb: publicGistActiveDocuments
+  });
+}
 
-        if (url) {
-          handleGistURL(url);
-        }
-      });
-    }
+/**
+ * Create a private Gist from the currently active documents.
+ *
+ * @api public
+ */
+
+function privateGistActiveDocuments() {
+  var mainWindow = MainWindow.current()
+    , currentTab = (mainWindow ? mainWindow.currentTab() : null)
+    , docs;
+
+  if (!currentTab) {
+    Alert.beep();
+    return;
+  }
+
+  docs = currentTab.activeDocuments() || [];
+
+  createGist({
+    pub: false,
+    docs: docs,
+    cb: privateGistActiveDocuments
   });
 }
 
@@ -146,7 +250,11 @@ credentials.username = Storage.persistent().get('githubUsername');
  */
 
 Hooks.addMenuItem('Actions/Gist/Public Gist Current Document', 'control-shift-g', publicGistCurrentDocument);
+Hooks.addMenuItem('Actions/Gist/Private Gist Current Document', 'control-option-shift-g', privateGistCurrentDocument);
 Hooks.addMenuItem('Actions/Gist/Public Gist Selected Documents', 'command-control-shift-g', publicGistSelectedDocuments);
+Hooks.addMenuItem('Actions/Gist/Private Gist Selected Documents', 'command-option-control-shift-g', privateGistSelectedDocuments);
+Hooks.addMenuItem('Actions/Gist/Public Gist Active Documents', 'command-control-shift-a', publicGistActiveDocuments);
+Hooks.addMenuItem('Actions/Gist/Private Gist Active Documents', 'command-option-control-shift-a', privateGistActiveDocuments);
 
 /**
  * Show the gist login window.
