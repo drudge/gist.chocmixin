@@ -63,18 +63,22 @@ function publicGistCurrentDocument() {
 
     var gist = new Gister({username: credentials.username, password: credentials.password })
       , doc = Document.current()
-      , file = doc.filename()
+      , file = doc.isUntitled() ? 'untitled' : doc.filename()
       , payload = {};
-
-    file = file || 'untitled';
+    
+    if (!doc.text) {
+      Alert.beep();
+      return;
+    }
+    
     payload[file] = doc.text;
-
+    
     gist.create(payload);
-
+    
     gist.on('created', function (d) {
       d = d || {};
       url = d.html_url;
-
+      
       if (url) {
         handleGistURL(url);
       }
