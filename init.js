@@ -260,6 +260,9 @@ Hooks.addMenuItem('Actions/Gist/Public Gist Selected Documents', 'command-contro
 Hooks.addMenuItem('Actions/Gist/Private Gist Selected Documents', 'command-option-control-shift-g', privateGistSelectedDocuments);
 Hooks.addMenuItem('Actions/Gist/Public Gist Active Documents', 'command-control-shift-a', publicGistActiveDocuments);
 Hooks.addMenuItem('Actions/Gist/Private Gist Active Documents', 'command-option-control-shift-a', privateGistActiveDocuments);
+Hooks.addMenuItem('Actions/Gist/Login Credentials...', '', function() {
+   showLoginWindow('Save',function(){});
+});
 
 /**
  * Show the gist login window.
@@ -267,13 +270,18 @@ Hooks.addMenuItem('Actions/Gist/Private Gist Active Documents', 'command-option-
  * @api public
  */
 
-function showLoginWindow(fn) {
+function showLoginWindow(loginText, fn) {
   var win = new Window();
+  
+  if (typeof loginText === 'function') {
+   fn = loginText;
+   loginText = 'Login'; 
+  }
 
   win.title = 'Login to Gist';
   win.useDefaultCSS = false;
   win.htmlPath = 'login.html';
-  win.buttons = [ 'Login', 'Cancel' ];
+  win.buttons = [ loginText, 'Cancel' ];
   win.setFrame({x: 0, y: 0, width: 259, height: 211}, true);
 
   win.onLoad = function() {
