@@ -25,7 +25,7 @@ var service = 'Chocolat Gist Plugin'
  */
 
 function handleGistURL(url, isPublic) {
-  pubStr = (typeof isPublic === true) ? 'Public' : 'Private';
+  pubStr = (isPublic === true) ? 'Public' : 'Private';
   
   if (!url) return;
   
