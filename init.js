@@ -94,8 +94,10 @@ function createGist(options) {
       Alert.beep();
       return;
     }
-    
-    gist.create(payload);
+        
+    gist.on('error', function (msg, body, res) {
+      Alert.show('' + msg, 'Could not complete the requested action. Check your credentials and try again.', ['OK']);
+    })
     
     gist.on('created', function (d) {
       d = d || {};
@@ -105,6 +107,8 @@ function createGist(options) {
         handleGistURL(url, isPublic);
       }
     });
+    
+    gist.create(payload);
   });
 }
 
