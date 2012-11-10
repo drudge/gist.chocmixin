@@ -53,6 +53,8 @@ function handleGistURL(url, isPublic) {
 function createGist(options) {
   var isPublic = (typeof options.pub !== 'undefined') ? options.pub : true;
   var docs = options.docs || [];
+  var text = options.text;
+  var filename = options.filename || 'untitled';
   options.cb = options.cb || function() {};
   
   if (!credentials.username) {
@@ -82,6 +84,10 @@ function createGist(options) {
       }
     });
     
+    if (text) {
+      payload.files[filename] = { content: text };
+    }
+    
     var count = Object.keys(payload.files).length;
     
     if (!count) {
@@ -110,12 +116,12 @@ function createGist(options) {
 
 function publicGistCurrentDocument() {
   var doc = Document.current();
-  
+
   if (!doc) {
     Alert.beep();
     return;
   }
-  
+
   createGist({
     pub: true,
     docs: [ doc ],
@@ -123,6 +129,36 @@ function publicGistCurrentDocument() {
   });
 }
 
+/**
+ * Create a public Gist from the current selection.
+ *
+ * @api public
+ */
+
+function publicGistCurrentSelection() {
+  var doc = Document.current();
+
+  if (!doc) {
+    Alert.beep();
+    return;
+  }
+
+  Recipe.run(function(recipe) {
+    if (!recipe.selection.length) {
+      Alert.beep();
+      return;
+    }
+      
+    var text = recipe.textInRange(recipe.selection);
+    var filename = doc.filename();
+    createGist({
+      pub: true,
+      text: text,
+      filename: 'selection in ' + filename,
+      cb: publicGistCurrentSelection
+    });
+  });
+}
 
 /**
  * Create a private Gist from the current document.
@@ -142,6 +178,37 @@ function privateGistCurrentDocument() {
     pub: false,
     docs: [ doc ],
     cb: privateGistCurrentDocument
+  });
+}
+
+/**
+ * Create a public Gist from the current selection.
+ *
+ * @api public
+ */
+
+function privateGistCurrentSelection() {
+  var doc = Document.current();
+
+  if (!doc) {
+    Alert.beep();
+    return;
+  }
+
+  Recipe.run(function(recipe) {
+    if (!recipe.selection.length) {
+      Alert.beep();
+      return;
+    }
+
+    var text = recipe.textInRange(recipe.selection);
+    var filename = doc.filename();
+    createGist({
+      pub: false,
+      text: text,
+      filename: 'selection in ' + filename,
+      cb: privateGistCurrentSelection
+    });
   });
 }
 
@@ -254,6 +321,8 @@ credentials.username = Storage.persistent().get('githubUsername');
  * Hook up menu items.
  */
 
+Hooks.addMenuItem('Actions/Gist/Public Gist Current Selection', 'control-shift-`', publicGistCurrentSelection);
+Hooks.addMenuItem('Actions/Gist/Private Gist Current Selection', 'control-option-shift-`', privateGistCurrentSelection);
 Hooks.addMenuItem('Actions/Gist/Public Gist Current Document', 'control-shift-g', publicGistCurrentDocument);
 Hooks.addMenuItem('Actions/Gist/Private Gist Current Document', 'control-option-shift-g', privateGistCurrentDocument);
 Hooks.addMenuItem('Actions/Gist/Public Gist Selected Documents', 'command-control-shift-g', publicGistSelectedDocuments);
